@@ -22,8 +22,6 @@
 //No numbers are larger than Pivot >> do not swap (Pivot is the largest number). Add an entry to the awaiting indices from min to pointer1-1
 //The number of the second pointer is bigger than the Pivot >> Swap with the pivot and add an entry to the awaiting indices from min to pointer1-2 and pointer1+1 and max
 
-//2, 1, 3, 4, 6, 7, 9, 8, 5
-
 import java.lang.Comparable;
 import java.util.List;
 import java.util.Arrays;
