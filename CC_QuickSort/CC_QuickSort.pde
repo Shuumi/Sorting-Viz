@@ -1,4 +1,4 @@
-//Have 3 modes.
+//Have 3 modes. //<>//
 //Mode 1: (The first pointer is moving)
 //Check whether the positions of the pointers is equal if yes go to Mode 3.
 //Check whether the current element at the pointer position is bigger than the pivot.
@@ -25,6 +25,7 @@
 import java.lang.Comparable;
 import java.util.List;
 import java.util.Arrays;
+import java.util.InputMismatchException;
 
 Comparable[] comparableArray;
 Comparable pivotElement;
@@ -38,118 +39,163 @@ Integer mode;
 
 boolean somethingChanged = true;
 
-void setup() {
-  size(2500, 600);
-  frameRate(width);
-  
-  comparableArray = new Integer[width];
+//Parameters
+int amountOfNumbersToSort = 1; //Set between 2 and width to give an amout or set to 0 or 1 to make the width the amount of numbers
 
+void setup() {
+  size(1920, 1080);
+  frameRate(60);
+  if(amountOfNumbersToSort >= 0 && amountOfNumbersToSort <= width){
+    if(amountOfNumbersToSort < 2){
+    comparableArray = new Integer[width];
+    } else {
+      comparableArray = new Integer[amountOfNumbersToSort];
+    }
+  } else {
+    System.exit(1);
+  }
+
+  prepareInitialParameters();
+}
+
+void prepareInitialParameters() {
+  fillComparableArray();
+  currentIndices = new Indices(0, comparableArray.length-1);
+  pivotElement = comparableArray[currentIndices.endIndex];
+  pointer1 = 0;
+  pointer2 = comparableArray.length-2;
+  mode = 1;
+}
+
+void fillComparableArray() {
   for (int i = 0; i < comparableArray.length; i++) {
     comparableArray[i] = (int) random(height);
     //comparableArray[i] = height - (1+i)*100-50;
   }
-
-  currentIndices = new Indices(0, comparableArray.length-1);
-  pointer1 = 0;
-  pointer2 = comparableArray.length-2;
-  pivotElement = comparableArray[currentIndices.endIndex];
-  mode = 1;
 }
 
 void draw() {
   if (somethingChanged) {
     somethingChanged = false;
-    background(0);
-    int linewidth = width/comparableArray.length;
-    if (linewidth > 1) {
-      for (int i = 0; i < comparableArray.length; i++) {
-        stroke(255);
-        fill(255);
-        if (i<comparableArray.length-1) {
-          if(comparableArray[i].compareTo(comparableArray[i+1]) == 1){
-            println(comparableArray[i], comparableArray[i+1]);
-            stroke(255, 0, 0);
-            fill(255, 0, 0);
-          }
-        }
-
-        rect(i*linewidth, height - (int) comparableArray[i], linewidth, (int) comparableArray[i]);
-      }
-    } else {
-      for (int i = 0; i < comparableArray.length; i++) {
-        stroke(255);
-        if (i<comparableArray.length-1 && comparableArray[i].compareTo(comparableArray[i+1]) == 1) {
-          stroke(255, 0, 0);
-        }
-
-        line(i, height, i, height - (int) comparableArray[i]);
-      }
-    }
+    drawAgain();
   }
 
-  //stepwise quicksort algorithm
+  while(!somethingChanged){
+    switchModes();
+  }
+}
+
+//-------------Drawing-------------
+
+void drawAgain() {
+  background(0);
+  float linewidth = 1.0*width/comparableArray.length;
+  if (linewidth > 1) {
+    drawRectangles(linewidth);
+  } else {
+    drawLines();
+  }
+}
+
+void drawRectangles(float linewidth) {
+  for (int i = 0; i < comparableArray.length; i++) {
+    stroke(255);
+    fill(255);
+    if (isPlacedWrongly(i)) {
+      stroke(255, 0, 0);
+      fill(255, 0, 0);
+    }
+
+    rect(i*linewidth, height - (int) comparableArray[i], linewidth, (int) comparableArray[i]);
+  }
+}
+
+void drawLines() {
+  for (int i = 0; i < comparableArray.length; i++) {
+    stroke(255);
+    if (isPlacedWrongly(i)) {
+      stroke(255, 0, 0);
+    }
+
+    line(i, height, i, height - (int) comparableArray[i]);
+  }
+}
+
+boolean isPlacedWrongly(int index) {
+  return index<comparableArray.length-1 && comparableArray[index].compareTo(comparableArray[index+1]) == 1;
+}
+
+//-------------Quicksort-------------
+
+void switchModes() {
   switch(mode) {
   case 1:
-    if (pointersMet()) {
-      mode = 3;
-      break;
-    }
-
-    currentElement = comparableArray[pointer1];
-    if (currentElement.compareTo(pivotElement) == 1) {
-      mode = 2;
-      break;
-    }
-    pointer1++;
+    workMode1();
     break;
-
   case 2:
-    if (pointersMet()) {
-      mode = 3;
-      break;
-    }
-
-    currentElement = comparableArray[pointer2];
-    if (currentElement.compareTo(pivotElement) == -1) {
-      swap(comparableArray, pointer1, pointer2);
-      mode = 1;
-      break;
-    }
-    pointer2--;
+    workMode2();
     break;
   case 3:
     workMode3();
     break;
-
   default:
     break;
   }
 }
 
-
-
-//-------------Helpers-------------
-
-void workMode3() {
-  //final swaps
-  Comparable elementAtOne = comparableArray[pointer1];
-  if (elementAtOne.compareTo(pivotElement) == 1) {
-    swap(comparableArray, pointer1, currentIndices.endIndex);
-    if (currentIndices.startIndex < pointer1 - 1) {
-      awaitingIndices.add(new Indices(currentIndices.startIndex, pointer1 - 1));
-    }
-    if (pointer1 + 1 < currentIndices.endIndex) {
-      awaitingIndices.add(new Indices(pointer1 + 1, currentIndices.endIndex));
-    }
+void workMode1() {
+  if (pointersMet()) {
+    mode = 3;
   } else {
-    if (currentIndices.startIndex < pointer1) {
-      awaitingIndices.add(new Indices(currentIndices.startIndex, pointer1));
+    currentElement = comparableArray[pointer1];
+    if (isCurrentElementBiggerThanPivot()) {
+      mode = 2;
+    } else {
+      pointer1++;
     }
   }
-  //if (currentIndices.endIndex > pointer1+1)
-  //  awaitingIndices.add(new Indices(pointer1+1, currentIndices.endIndex));
+}
+
+void workMode2() {
+  if (pointersMet()) {
+    mode = 3;
+  } else {
+    currentElement = comparableArray[pointer2];
+    if (!isCurrentElementBiggerThanPivot()) {
+      swap(comparableArray, pointer1, pointer2);
+      mode = 1;
+    } else {
+      pointer2--;
+    }
+  }
+}
+
+void workMode3() {
+  doFinalSwaps();
 
   //new Indices
+  prepareNewIndices();
+}
+
+void doFinalSwaps() {
+  if (comparableArray[pointer1].compareTo(pivotElement) == 1) {
+    swap(comparableArray, pointer1, currentIndices.endIndex);
+    addAwaitingIndicesAfterSwap();
+  } else if (currentIndices.startIndex < pointer1) {
+    awaitingIndices.add(new Indices(currentIndices.startIndex, pointer1));
+  }
+}
+
+void addAwaitingIndicesAfterSwap() {
+  if (currentIndices.startIndex < pointer1 - 1) {
+    awaitingIndices.add(new Indices(currentIndices.startIndex, pointer1 - 1));
+  }
+  if (pointer1 + 1 < currentIndices.endIndex) {
+    awaitingIndices.add(new Indices(pointer1 + 1, currentIndices.endIndex));
+  }
+}
+
+void prepareNewIndices() {
   if (!awaitingIndices.isEmpty()) {
 
     currentIndices = awaitingIndices.get(0);
@@ -164,12 +210,13 @@ void workMode3() {
 }
 
 boolean pointersMet() {
+  //DO NOT COMPARE USING ==
   return pointer1.equals(pointer2);
 }
 
 Object[] swap(Object[] array, int index1, int index2) {
   somethingChanged = true;
-  
+
   Object placeholder = array[index1];
   array[index1] = array[index2];
   array[index2] = placeholder;
@@ -192,4 +239,8 @@ class Indices {
   int getEndIndex() {
     return endIndex;
   }
+}
+
+boolean isCurrentElementBiggerThanPivot() {
+  return currentElement.compareTo(pivotElement) == 1;
 }
