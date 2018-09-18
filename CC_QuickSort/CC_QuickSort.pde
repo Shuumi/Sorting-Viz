@@ -80,7 +80,8 @@ void draw() {
     drawAgain();
   }
 
-  while(!somethingChanged){
+  int idleRepeats = 0;
+  while(!somethingChanged && idleRepeats++ < 100){
     switchModes();
   }
 }
